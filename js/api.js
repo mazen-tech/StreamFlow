@@ -49,7 +49,7 @@ function buildCard(movie, { showRank = false } = {}) {
   const tags    = `<span class="tag">${movie.category}</span>`;
 
   const article = document.createElement('article');
-  article.className = 'card';
+  article.className = 'card'; article.dataset.movieId = movie.id;
   article.setAttribute('role', 'listitem');
   article.setAttribute('tabindex', '0');
   article.setAttribute('aria-label', `${movie.title} – ${movie.category}`);

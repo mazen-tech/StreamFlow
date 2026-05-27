@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="StreamFlow – Twoja platforma streamingowa. Filmy, seriale i dokumenty bez reklam." />
-  <meta name="keywords" content="streaming, filmy, seriale, StreamFlow, VOD" />
-  <meta name="author" content="StreamFlow" />
   <title>StreamFlow – Oglądaj bez granic</title>
 
   <!-- Fonts -->
@@ -13,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
-  <!-- Styles -->
+  <!-- Original styles (keep all your CSS untouched) -->
   <link rel="stylesheet" href="css/reset.css" />
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/base.css" />
@@ -24,6 +22,546 @@
   <link rel="stylesheet" href="css/pricing.css" />
   <link rel="stylesheet" href="css/footer.css" />
   <link rel="stylesheet" href="css/responsive.css" />
+
+  <!-- Enhancement styles (layered on top, never overwriting originals) -->
+  <style>
+    /* ─── CSS Variables ──────────────────────────────────────────────── */
+    :root {
+      --sf-red:      #e50914;
+      --sf-red-dim:  #b0060f;
+      --sf-gold:     #f5c518;
+      --sf-dark:     #0a0a0f;
+      --sf-card-bg:  #141420;
+      --sf-surface:  #1a1a2e;
+      --sf-border:   rgba(255,255,255,0.08);
+      --sf-overlay:  rgba(0,0,0,0.85);
+      --sf-text:     #e8e8f0;
+      --sf-muted:    #888899;
+      --sf-radius:   12px;
+      --sf-radius-lg:20px;
+      --transition:  0.25s ease;
+    }
+
+    /* ─── SEARCH OVERLAY ─────────────────────────────────────────────── */
+    .search-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(5,5,12,0.96);
+      backdrop-filter: blur(16px);
+      display: flex; flex-direction: column; align-items: center;
+      padding-top: 80px;
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--transition);
+    }
+    .search-overlay.open { opacity: 1; pointer-events: all; }
+
+    .search-overlay__inner {
+      width: min(760px, 92vw);
+    }
+    .search-overlay__label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.2rem,3vw,1.6rem);
+      letter-spacing: 0.12em;
+      color: var(--sf-muted);
+      margin-bottom: 16px;
+    }
+    .search-overlay__box {
+      display: flex; gap: 0;
+      background: var(--sf-surface);
+      border: 1.5px solid var(--sf-border);
+      border-radius: var(--sf-radius);
+      overflow: hidden;
+      box-shadow: 0 4px 40px rgba(229,9,20,0.15);
+    }
+    .search-overlay__input {
+      flex: 1; background: transparent; border: none; outline: none;
+      padding: 18px 22px;
+      font-family: 'Outfit', sans-serif; font-size: 1.1rem;
+      color: var(--sf-text);
+    }
+    .search-overlay__input::placeholder { color: var(--sf-muted); }
+    .search-overlay__btn {
+      background: var(--sf-red); border: none; cursor: pointer;
+      padding: 0 26px;
+      font-size: 1.2rem; color: #fff;
+      transition: background var(--transition);
+    }
+    .search-overlay__btn:hover { background: var(--sf-red-dim); }
+    .search-overlay__close {
+      position: absolute; top: 22px; right: 28px;
+      background: none; border: none; cursor: pointer;
+      color: var(--sf-muted); font-size: 1.8rem; line-height:1;
+      transition: color var(--transition);
+    }
+    .search-overlay__close:hover { color: #fff; }
+    .search-results {
+      margin-top: 32px;
+      display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr));
+      gap: 16px;
+    }
+    .search-results__empty {
+      color: var(--sf-muted); font-size: 1rem; text-align: center;
+      margin-top: 40px; grid-column: 1/-1;
+    }
+    .search-results__loading {
+      color: var(--sf-muted); text-align: center;
+      margin-top: 24px; grid-column:1/-1;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+    /* ─── SEARCH RESULT MINI-CARD ────────────────────────────────────── */
+    .mini-card {
+      background: var(--sf-card-bg);
+      border: 1px solid var(--sf-border);
+      border-radius: var(--sf-radius);
+      overflow: hidden; cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .mini-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+    .mini-card__poster {
+      aspect-ratio: 2/3; display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem;
+      background: linear-gradient(135deg,#1e1e32,#0e0e1a);
+    }
+    .mini-card__info { padding: 10px 12px 12px; }
+    .mini-card__title { font-weight: 600; font-size: .85rem; line-height: 1.3; color: var(--sf-text); }
+    .mini-card__meta  { font-size: .75rem; color: var(--sf-muted); margin-top: 3px; }
+
+    /* ─── NAV SEARCH BUTTON ──────────────────────────────────────────── */
+    .nav__search-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--sf-text); font-size: 1.1rem; padding: 6px 8px;
+      opacity: .75; transition: opacity var(--transition);
+      display: flex; align-items: center;
+    }
+    .nav__search-btn:hover { opacity: 1; }
+
+    /* ─── MOVIE DETAIL MODAL ─────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 3000;
+      background: var(--sf-overlay);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 40px 16px 40px;
+      overflow-y: auto;
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--transition);
+    }
+    .modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+    .movie-modal {
+      width: min(860px, 96vw);
+      background: var(--sf-card-bg);
+      border: 1px solid var(--sf-border);
+      border-radius: var(--sf-radius-lg);
+      overflow: hidden;
+      transform: translateY(24px);
+      transition: transform var(--transition);
+      position: relative;
+    }
+    .modal-backdrop.open .movie-modal { transform: translateY(0); }
+
+    .movie-modal__hero {
+      position: relative;
+      height: 340px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 6rem;
+      background: linear-gradient(135deg, #0e0e1e, #1a1a2e);
+      overflow: hidden;
+    }
+    .movie-modal__hero-gradient {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, var(--sf-card-bg) 0%, transparent 50%);
+    }
+    .movie-modal__play-big {
+      position: absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      z-index: 2;
+    }
+    .modal-play-btn {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(229,9,20,0.92);
+      border: 3px solid rgba(255,255,255,0.3);
+      cursor: pointer; font-size: 1.6rem; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform var(--transition), background var(--transition);
+      box-shadow: 0 0 40px rgba(229,9,20,0.5);
+    }
+    .modal-play-btn:hover { transform: scale(1.1); background: var(--sf-red-dim); }
+
+    .movie-modal__body { padding: 28px 32px 36px; }
+    .movie-modal__top {
+      display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .movie-modal__title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.8rem,4vw,2.8rem);
+      letter-spacing: .04em; color: #fff; flex: 1;
+    }
+    .movie-modal__rating {
+      background: rgba(245,197,24,0.15);
+      border: 1px solid rgba(245,197,24,0.4);
+      color: var(--sf-gold);
+      padding: 6px 14px; border-radius: 8px;
+      font-weight: 700; font-size: 1rem;
+      white-space: nowrap;
+    }
+    .movie-modal__meta {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      color: var(--sf-muted); font-size: .9rem; margin-bottom: 18px;
+    }
+    .movie-modal__meta span { display: flex; align-items: center; gap: 4px; }
+    .movie-modal__tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .movie-modal__tag {
+      background: rgba(229,9,20,0.12);
+      border: 1px solid rgba(229,9,20,0.3);
+      color: #ff6b6b; padding: 4px 12px; border-radius: 20px; font-size: .8rem;
+    }
+    .movie-modal__desc {
+      color: #b0b0c0; line-height: 1.7; font-size: .95rem; margin-bottom: 28px;
+    }
+    .movie-modal__actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .modal-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 28px; border-radius: 10px; cursor: pointer;
+      font-family: 'Outfit', sans-serif; font-weight: 600; font-size: .95rem;
+      border: none; transition: all var(--transition); text-decoration: none;
+    }
+    .modal-btn--primary { background: var(--sf-red); color: #fff; }
+    .modal-btn--primary:hover { background: var(--sf-red-dim); transform: translateY(-1px); }
+    .modal-btn--outline {
+      background: transparent; color: var(--sf-text);
+      border: 1.5px solid var(--sf-border);
+    }
+    .modal-btn--outline:hover { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.05); }
+    .modal-btn--list {
+      background: rgba(255,255,255,0.07); color: var(--sf-text);
+    }
+    .modal-btn--list:hover { background: rgba(255,255,255,0.12); }
+    .modal-btn--list.added { color: #4caf50; }
+
+    .movie-modal__close {
+      position: absolute; top: 16px; right: 16px; z-index: 10;
+      background: rgba(0,0,0,0.6); border: 1px solid var(--sf-border);
+      color: var(--sf-text); width: 40px; height: 40px; border-radius: 50%;
+      cursor: pointer; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition);
+    }
+    .movie-modal__close:hover { background: rgba(255,255,255,0.12); }
+
+    /* ─── PLAYER OVERLAY ─────────────────────────────────────────────── */
+    .player-overlay {
+      position: fixed; inset: 0; z-index: 5000;
+      background: #000;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .player-overlay.open { opacity: 1; pointer-events: all; }
+    .player-overlay__screen {
+      width: min(900px,94vw);
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #0a0a14, #131325);
+      border-radius: var(--sf-radius);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .player-overlay__icon { font-size: 5rem; margin-bottom: 16px; }
+    .player-overlay__title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(1.4rem,3vw,2.4rem);
+      color: #fff; letter-spacing: .05em; margin-bottom: 8px;
+    }
+    .player-overlay__sub { color: var(--sf-muted); font-size: .9rem; }
+    .player-scanlines {
+      position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    }
+    .player-bar {
+      width: min(900px,94vw);
+      display: flex; align-items: center; gap: 14px;
+      margin-top: 20px; padding: 0 4px;
+    }
+    .player-bar__title { color: #fff; font-weight: 600; flex: 1; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .player-progress {
+      flex: 2; height: 4px; background: rgba(255,255,255,0.15);
+      border-radius: 2px; position: relative; cursor: pointer;
+    }
+    .player-progress__fill {
+      height: 100%; background: var(--sf-red); border-radius: 2px;
+      width: 0%; transition: width .5s linear;
+    }
+    .player-time { color: var(--sf-muted); font-size: .8rem; white-space: nowrap; }
+    .player-btn {
+      background: none; border: none; cursor: pointer; color: #fff;
+      font-size: 1.2rem; padding: 6px; border-radius: 6px;
+      transition: background var(--transition);
+    }
+    .player-btn:hover { background: rgba(255,255,255,0.1); }
+    .player-close {
+      position: absolute; top: 20px; right: 20px;
+      background: rgba(0,0,0,0.7); border: 1px solid var(--sf-border);
+      color: #fff; padding: 8px 16px; border-radius: 8px;
+      cursor: pointer; font-size: .85rem;
+      transition: background var(--transition);
+    }
+    .player-close:hover { background: rgba(255,255,255,0.12); }
+
+    /* ─── LOGIN MODAL ────────────────────────────────────────────────── */
+    .login-modal {
+      width: min(460px, 96vw);
+      background: var(--sf-card-bg);
+      border: 1px solid var(--sf-border);
+      border-radius: var(--sf-radius-lg);
+      padding: 40px 36px;
+      transform: translateY(24px);
+      transition: transform var(--transition);
+      position: relative;
+    }
+    .modal-backdrop.open .login-modal { transform: translateY(0); }
+    .login-modal__logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem; letter-spacing: .1em;
+      color: var(--sf-red); margin-bottom: 8px;
+    }
+    .login-modal__title {
+      font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 6px;
+    }
+    .login-modal__sub { color: var(--sf-muted); font-size: .9rem; margin-bottom: 28px; }
+    .login-modal__tabs {
+      display: flex; gap: 0;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px; padding: 4px;
+      margin-bottom: 24px;
+    }
+    .login-tab {
+      flex:1; padding: 9px; border:none; background:none;
+      color: var(--sf-muted); font-family: 'Outfit',sans-serif; font-size:.9rem; font-weight:600;
+      border-radius: 8px; cursor: pointer; transition: all var(--transition);
+    }
+    .login-tab.active { background: var(--sf-red); color: #fff; }
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block; font-size: .8rem; font-weight: 600;
+      color: var(--sf-muted); margin-bottom: 6px; letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .form-input {
+      width: 100%; padding: 13px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--sf-border);
+      border-radius: 9px;
+      color: var(--sf-text); font-family: 'Outfit',sans-serif; font-size:.95rem;
+      outline: none; transition: border-color var(--transition);
+      box-sizing: border-box;
+    }
+    .form-input:focus { border-color: var(--sf-red); }
+    .form-submit {
+      width: 100%; padding: 14px;
+      background: var(--sf-red); color: #fff; border: none;
+      border-radius: 10px; font-family:'Outfit',sans-serif; font-size:1rem; font-weight:700;
+      cursor: pointer; margin-top: 8px;
+      transition: background var(--transition), transform var(--transition);
+    }
+    .form-submit:hover { background: var(--sf-red-dim); transform: translateY(-1px); }
+    .login-modal__footer {
+      text-align: center; margin-top: 20px;
+      color: var(--sf-muted); font-size: .85rem;
+    }
+    .login-modal__footer a { color: var(--sf-red); text-decoration: none; }
+
+    /* ─── TOAST NOTIFICATION ─────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 32px; right: 32px; z-index: 9000;
+      background: var(--sf-surface);
+      border: 1px solid var(--sf-border);
+      border-left: 4px solid var(--sf-red);
+      border-radius: var(--sf-radius);
+      padding: 14px 20px;
+      color: var(--sf-text); font-size: .9rem;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      max-width: 320px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.success { border-left-color: #4caf50; }
+
+    /* ─── MY LIST BUTTON ─────────────────────────────────────────────── */
+    .mylist-btn {
+      position: fixed; bottom: 32px; left: 32px; z-index: 1000;
+      background: var(--sf-surface);
+      border: 1px solid var(--sf-border);
+      border-radius: 50px;
+      padding: 12px 22px;
+      color: var(--sf-text); font-size: .85rem; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      transition: all var(--transition);
+      box-shadow: 0 4px 20px rgba(0,0,0,.4);
+    }
+    .mylist-btn:hover { border-color: var(--sf-red); color: var(--sf-red); }
+    .mylist-count {
+      background: var(--sf-red); color: #fff;
+      border-radius: 50%; width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 700;
+    }
+
+    /* ─── MY LIST PANEL ──────────────────────────────────────────────── */
+    .mylist-panel {
+      position: fixed; right: 0; top: 0; bottom: 0; z-index: 4000;
+      width: min(400px, 95vw);
+      background: var(--sf-card-bg);
+      border-left: 1px solid var(--sf-border);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      display: flex; flex-direction: column;
+    }
+    .mylist-panel.open { transform: translateX(0); }
+    .mylist-panel__head {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid var(--sf-border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .mylist-panel__title {
+      font-family: 'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:.05em; color:#fff;
+    }
+    .mylist-panel__close {
+      background:none; border:none; color:var(--sf-muted); font-size:1.4rem; cursor:pointer;
+      transition: color var(--transition);
+    }
+    .mylist-panel__close:hover { color: #fff; }
+    .mylist-panel__body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; }
+    .mylist-panel__empty { color:var(--sf-muted); text-align:center; margin-top:60px; font-size:.95rem; }
+    .mylist-item {
+      display: flex; gap:12px; align-items:center;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--sf-border);
+      border-radius: 10px; padding: 12px;
+      cursor: pointer; transition: background var(--transition);
+    }
+    .mylist-item:hover { background: rgba(255,255,255,0.07); }
+    .mylist-item__icon { font-size: 1.8rem; flex-shrink: 0; }
+    .mylist-item__info { flex:1; min-width:0; }
+    .mylist-item__title { font-weight:600; color:#fff; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mylist-item__meta { color:var(--sf-muted); font-size:.8rem; }
+    .mylist-item__remove {
+      background:none; border:none; color:var(--sf-muted); cursor:pointer; font-size:1rem;
+      flex-shrink:0; padding:4px 6px; border-radius:6px;
+      transition: color var(--transition), background var(--transition);
+    }
+    .mylist-item__remove:hover { color:#e55; background:rgba(229,9,20,0.1); }
+
+    /* ─── SEARCH NAV ICON IN NAV ACTIONS ─────────────────────────────── */
+    .nav__actions { display: flex; align-items: center; gap: 6px; }
+
+    /* ─── CARD CURSOR POINTER ────────────────────────────────────────── */
+    .card { cursor: pointer; }
+
+    /* ─── SCROLL BAR STYLE ───────────────────────────────────────────── */
+    .mylist-panel__body::-webkit-scrollbar { width: 4px; }
+    .mylist-panel__body::-webkit-scrollbar-track { background: transparent; }
+    .mylist-panel__body::-webkit-scrollbar-thumb { background: var(--sf-border); border-radius: 2px; }
+
+    /* ─── AVATAR BUTTON ──────────────────────────────────────────────── */
+    .sf-avatar-wrapper {
+      position: relative;
+    }
+    .sf-avatar-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none; cursor: pointer; padding: 3px;
+      border-radius: 50px;
+      transition: background var(--transition);
+    }
+    .sf-avatar-btn:hover { background: rgba(255,255,255,0.07); }
+    .sf-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; font-weight: 800; color: #fff;
+      letter-spacing: -.01em;
+      flex-shrink: 0;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.12);
+    }
+    .sf-avatar-chevron {
+      color: var(--sf-muted); font-size: .7rem;
+      transition: transform var(--transition);
+    }
+    .sf-avatar-btn[aria-expanded="true"] .sf-avatar-chevron { transform: rotate(180deg); }
+
+    /* ─── AVATAR DROPDOWN ────────────────────────────────────────────── */
+    .sf-dropdown {
+      position: absolute; top: calc(100% + 12px); right: 0;
+      width: 260px;
+      background: var(--sf-card-bg);
+      border: 1px solid var(--sf-border);
+      border-radius: var(--sf-radius);
+      box-shadow: 0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,0.04);
+      overflow: hidden;
+      z-index: 1500;
+      animation: dropIn .18s ease;
+    }
+    @keyframes dropIn {
+      from { opacity:0; transform:translateY(-6px) scale(.97); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+
+    .sf-dropdown__header {
+      display: flex; gap: 12px; align-items: center;
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--sf-border);
+    }
+    .sf-dropdown__avatar {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .95rem; font-weight: 800; color: #fff;
+    }
+    .sf-dropdown__info { min-width: 0; }
+    .sf-dropdown__name {
+      display: block; font-size: .92rem; font-weight: 700; color: #fff;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sf-dropdown__email {
+      display: block; font-size: .75rem; color: var(--sf-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .sf-dropdown__plan {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--sf-border);
+    }
+    .sf-dropdown__plan-badge {
+      font-size: .75rem; font-weight: 700; letter-spacing: .06em;
+      color: var(--sf-red);
+      background: rgba(229,9,20,0.1);
+      border: 1px solid rgba(229,9,20,0.25);
+      padding: 3px 10px; border-radius: 20px;
+    }
+
+    .sf-dropdown__menu {
+      padding: 6px 0; list-style: none;
+    }
+    .sf-dropdown__item {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; padding: 10px 16px;
+      background: none; border: none; text-align: left;
+      color: var(--sf-text); font-family: 'Outfit',sans-serif; font-size: .88rem;
+      cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+    }
+    .sf-dropdown__item:hover { background: rgba(255,255,255,0.06); }
+    .sf-dropdown__item--danger { color: #ff6b6b; }
+    .sf-dropdown__item--danger:hover { background: rgba(229,9,20,0.1); }
+    .sf-dropdown__count {
+      background: rgba(255,255,255,0.1);
+      padding: 2px 8px; border-radius: 20px; font-size: .75rem;
+      color: var(--sf-muted);
+    }
+    .sf-dropdown__divider {
+      height: 1px; background: var(--sf-border); margin: 4px 0;
+    }
+  </style>
 </head>
 <body>
 
@@ -35,7 +573,6 @@
         StreamFlow
       </a>
 
-      <!-- Desktop nav links -->
       <ul class="nav__links" role="list">
         <li><a href="#trending" class="nav__link">Trendy</a></li>
         <li><a href="#categories" class="nav__link">Kategorie</a></li>
@@ -45,11 +582,11 @@
       </ul>
 
       <div class="nav__actions">
-        <a href="#pricing" class="btn btn--outline btn--sm">Zaloguj się</a>
-        <a href="#pricing" class="btn btn--primary btn--sm">Wypróbuj za darmo</a>
+        <!-- Search -->
+        <button class="nav__search-btn" id="searchOpenBtn" aria-label="Szukaj">🔍</button>
+        <!-- Auth buttons injected by app.js renderNavAuth() -->
       </div>
 
-      <!-- Hamburger button -->
       <button class="nav__hamburger" id="hamburgerBtn" aria-label="Otwórz menu" aria-expanded="false" aria-controls="mobileMenu">
         <span class="hamburger__line"></span>
         <span class="hamburger__line"></span>
@@ -57,7 +594,6 @@
       </button>
     </nav>
 
-    <!-- Mobile menu -->
     <div class="mobile-menu" id="mobileMenu" role="dialog" aria-label="Menu mobilne" aria-hidden="true">
       <ul class="mobile-menu__links" role="list">
         <li><a href="#trending" class="mobile-menu__link">Trendy</a></li>
@@ -67,7 +603,7 @@
         <li><a href="#faq" class="mobile-menu__link">FAQ</a></li>
       </ul>
       <div class="mobile-menu__actions">
-        <a href="#pricing" class="btn btn--outline">Zaloguj się</a>
+        <button class="btn btn--outline" id="loginOpenBtnMobile" style="cursor:pointer;font-family:inherit;background:none;color:inherit">Zaloguj się</button>
         <a href="#pricing" class="btn btn--primary">Wypróbuj za darmo</a>
       </div>
     </div>
@@ -94,17 +630,16 @@
         </p>
         <div class="hero__cta">
           <a href="#pricing" class="btn btn--primary btn--lg">Zacznij oglądać</a>
-          <a href="#trending" class="btn btn--ghost btn--lg">
+          <button class="btn btn--ghost btn--lg" id="heroWatchBtn" style="cursor:pointer;font-family:inherit;background:transparent;border:1.5px solid rgba(255,255,255,0.25);color:inherit">
             <span class="btn__icon" aria-hidden="true">▶</span>
             Zobacz co gra
-          </a>
+          </button>
         </div>
         <p class="hero__note">✓ Pierwszy miesiąc za darmo &nbsp;·&nbsp; ✓ Bez karty kredytowej</p>
       </div>
 
-      <!-- Featured movie card -->
       <div class="hero__featured" aria-hidden="true">
-        <div class="hero__featured-card">
+        <div class="hero__featured-card" id="heroFeaturedCard" style="cursor:pointer">
           <div class="hero__featured-poster">
             <div class="poster-placeholder poster--dark">
               <span class="poster-icon">🎬</span>
@@ -119,7 +654,6 @@
         </div>
       </div>
 
-      <!-- Scroll indicator -->
       <div class="hero__scroll" aria-hidden="true">
         <span class="scroll-dot"></span>
       </div>
@@ -156,152 +690,32 @@
           <h2 class="section__title" id="trending-heading">
             <span class="section__title-accent">🔥</span> Teraz na topie
           </h2>
-          <a href="#" class="section__link" aria-label="Zobacz wszystkie trendy">Zobacz wszystkie →</a>
+          <button class="section__link" onclick="document.getElementById('searchOpenBtn').click()" style="background:none;border:none;cursor:pointer;color:inherit;font-family:inherit">Zobacz wszystkie →</button>
         </div>
-
-        <div class="cards-row" role="list" aria-label="Popularne tytuły">
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Cień Północy – serial kryminalny">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--1">
-                <span class="poster-icon">🌑</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Cień Północy" tabindex="-1">▶</button>
-              </div>
-              <span class="card__rank" aria-label="Pozycja 1">#1</span>
-              <span class="card__badge">NOWE</span>
-            </div>
-            <div class="card__info">
-              <div class="card__tags">
-                <span class="tag">Kryminał</span>
-                <span class="tag">Thriller</span>
-              </div>
-              <h3 class="card__title">Cień Północy</h3>
-              <p class="card__meta">2024 · Sezon 1 · ★ 9.1</p>
-            </div>
-          </article>
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Głębina – film przygodowy">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--2">
-                <span class="poster-icon">🌊</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Głębinę" tabindex="-1">▶</button>
-              </div>
-              <span class="card__rank" aria-label="Pozycja 2">#2</span>
-            </div>
-            <div class="card__info">
-              <div class="card__tags">
-                <span class="tag">Przygoda</span>
-                <span class="tag">Sci-Fi</span>
-              </div>
-              <h3 class="card__title">Głębina</h3>
-              <p class="card__meta">2024 · 2h 14min · ★ 8.7</p>
-            </div>
-          </article>
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Rok Wilka – dramat">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--3">
-                <span class="poster-icon">🐺</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Rok Wilka" tabindex="-1">▶</button>
-              </div>
-              <span class="card__rank" aria-label="Pozycja 3">#3</span>
-            </div>
-            <div class="card__info">
-              <div class="card__tags">
-                <span class="tag">Dramat</span>
-              </div>
-              <h3 class="card__title">Rok Wilka</h3>
-              <p class="card__meta">2023 · Sezon 2 · ★ 8.5</p>
-            </div>
-          </article>
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Poza Zasięgiem – thriller">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--4">
-                <span class="poster-icon">📡</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Poza Zasięgiem" tabindex="-1">▶</button>
-              </div>
-              <span class="card__rank" aria-label="Pozycja 4">#4</span>
-            </div>
-            <div class="card__info">
-              <div class="card__tags">
-                <span class="tag">Thriller</span>
-              </div>
-              <h3 class="card__title">Poza Zasięgiem</h3>
-              <p class="card__meta">2024 · 1h 48min · ★ 7.9</p>
-            </div>
-          </article>
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Kod Zero – serial sensacyjny">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--5">
-                <span class="poster-icon">💻</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Kod Zero" tabindex="-1">▶</button>
-              </div>
-              <span class="card__rank" aria-label="Pozycja 5">#5</span>
-            </div>
-            <div class="card__info">
-              <div class="card__tags">
-                <span class="tag">Sensacja</span>
-                <span class="tag">Dramat</span>
-              </div>
-              <h3 class="card__title">Kod Zero</h3>
-              <p class="card__meta">2024 · Sezon 1 · ★ 8.2</p>
-            </div>
-          </article>
-
+        <div class="cards-row" role="list" aria-label="Popularne tytuły" id="trending-cards">
+          <!-- filled by api.js -->
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--1"><span class="poster-icon">🌑</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div><span class="card__rank">#1</span><span class="card__badge">NOWE</span></div><div class="card__info"><div class="card__tags"><span class="tag">Kryminał</span></div><h3 class="card__title">Cień Północy</h3><p class="card__meta">2024 · Sezon 1 · ★ 9.1</p></div></article>
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--2"><span class="poster-icon">🌊</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div><span class="card__rank">#2</span></div><div class="card__info"><div class="card__tags"><span class="tag">Sci-Fi</span></div><h3 class="card__title">Głębina</h3><p class="card__meta">2024 · 2h 14min · ★ 8.7</p></div></article>
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--3"><span class="poster-icon">🐺</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div><span class="card__rank">#3</span></div><div class="card__info"><div class="card__tags"><span class="tag">Dramat</span></div><h3 class="card__title">Rok Wilka</h3><p class="card__meta">2023 · Sezon 2 · ★ 8.5</p></div></article>
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--4"><span class="poster-icon">📡</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div><span class="card__rank">#4</span></div><div class="card__info"><div class="card__tags"><span class="tag">Thriller</span></div><h3 class="card__title">Poza Zasięgiem</h3><p class="card__meta">2024 · 1h 48min · ★ 7.9</p></div></article>
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--5"><span class="poster-icon">💻</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div><span class="card__rank">#5</span></div><div class="card__info"><div class="card__tags"><span class="tag">Sensacja</span></div><h3 class="card__title">Kod Zero</h3><p class="card__meta">2024 · Sezon 1 · ★ 8.2</p></div></article>
         </div>
       </div>
     </section>
 
-    <!-- ===== CATEGORIES SECTION (3-column grid) ===== -->
+    <!-- ===== CATEGORIES SECTION ===== -->
     <section class="section section--dark" id="categories" aria-labelledby="categories-heading">
       <div class="container">
         <div class="section__header">
           <h2 class="section__title" id="categories-heading">Przeglądaj kategorie</h2>
         </div>
-
         <div class="categories-grid" role="list" aria-label="Kategorie filmowe">
-          <a href="#" class="category-card category-card--action" role="listitem" aria-label="Akcja i przygoda">
-            <span class="category-card__icon" aria-hidden="true">💥</span>
-            <span class="category-card__name">Akcja</span>
-            <span class="category-card__count">1 240 tytułów</span>
-          </a>
-          <a href="#" class="category-card category-card--drama" role="listitem" aria-label="Dramaty">
-            <span class="category-card__icon" aria-hidden="true">🎭</span>
-            <span class="category-card__name">Dramat</span>
-            <span class="category-card__count">980 tytułów</span>
-          </a>
-          <a href="#" class="category-card category-card--comedy" role="listitem" aria-label="Komedie">
-            <span class="category-card__icon" aria-hidden="true">😂</span>
-            <span class="category-card__name">Komedia</span>
-            <span class="category-card__count">760 tytułów</span>
-          </a>
-          <a href="#" class="category-card category-card--scifi" role="listitem" aria-label="Sci-Fi i Fantasy">
-            <span class="category-card__icon" aria-hidden="true">🚀</span>
-            <span class="category-card__name">Sci-Fi</span>
-            <span class="category-card__count">540 tytułów</span>
-          </a>
-          <a href="#" class="category-card category-card--horror" role="listitem" aria-label="Horror i groza">
-            <span class="category-card__icon" aria-hidden="true">👁️</span>
-            <span class="category-card__name">Horror</span>
-            <span class="category-card__count">420 tytułów</span>
-          </a>
-          <a href="#" class="category-card category-card--doc" role="listitem" aria-label="Dokumenty">
-            <span class="category-card__icon" aria-hidden="true">🎥</span>
-            <span class="category-card__name">Dokumenty</span>
-            <span class="category-card__count">310 tytułów</span>
-          </a>
+          <a href="#trending" class="category-card category-card--action" role="listitem" aria-label="Akcja"><span class="category-card__icon" aria-hidden="true">💥</span><span class="category-card__name">Akcja</span><span class="category-card__count">1 240 tytułów</span></a>
+          <a href="#trending" class="category-card category-card--drama" role="listitem" aria-label="Dramat"><span class="category-card__icon" aria-hidden="true">🎭</span><span class="category-card__name">Dramat</span><span class="category-card__count">980 tytułów</span></a>
+          <a href="#trending" class="category-card category-card--comedy" role="listitem" aria-label="Komedia"><span class="category-card__icon" aria-hidden="true">😂</span><span class="category-card__name">Komedia</span><span class="category-card__count">760 tytułów</span></a>
+          <a href="#trending" class="category-card category-card--scifi" role="listitem" aria-label="Sci-Fi"><span class="category-card__icon" aria-hidden="true">🚀</span><span class="category-card__name">Sci-Fi</span><span class="category-card__count">540 tytułów</span></a>
+          <a href="#trending" class="category-card category-card--horror" role="listitem" aria-label="Horror"><span class="category-card__icon" aria-hidden="true">👁️</span><span class="category-card__name">Horror</span><span class="category-card__count">420 tytułów</span></a>
+          <a href="#trending" class="category-card category-card--doc" role="listitem" aria-label="Dokumenty"><span class="category-card__icon" aria-hidden="true">🎥</span><span class="category-card__name">Dokumenty</span><span class="category-card__count">310 tytułów</span></a>
         </div>
       </div>
     </section>
@@ -313,94 +727,15 @@
           <h2 class="section__title" id="new-heading">
             <span class="section__title-accent">✨</span> Nowości
           </h2>
-          <a href="#" class="section__link" aria-label="Zobacz wszystkie nowości">Zobacz wszystkie →</a>
+          <button class="section__link" onclick="document.getElementById('searchOpenBtn').click()" style="background:none;border:none;cursor:pointer;color:inherit;font-family:inherit">Zobacz wszystkie →</button>
         </div>
-
-        <div class="cards-row" role="list" aria-label="Nowe tytuły">
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Burza Doskonała – film 2024">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--6">
-                <span class="poster-icon">⛈️</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Burzę Doskonałą" tabindex="-1">▶</button>
-              </div>
-              <span class="card__badge card__badge--new">PREMIERA</span>
-            </div>
-            <div class="card__info">
-              <div class="card__tags"><span class="tag">Dramat</span></div>
-              <h3 class="card__title">Burza Doskonała</h3>
-              <p class="card__meta">2024 · 2h 03min · ★ 8.0</p>
-            </div>
-          </article>
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Widmo Miasta – serial">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--7">
-                <span class="poster-icon">🏙️</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Widmo Miasta" tabindex="-1">▶</button>
-              </div>
-              <span class="card__badge card__badge--new">NOWE</span>
-            </div>
-            <div class="card__info">
-              <div class="card__tags"><span class="tag">Kryminał</span></div>
-              <h3 class="card__title">Widmo Miasta</h3>
-              <p class="card__meta">2024 · Sezon 1 · ★ 7.8</p>
-            </div>
-          </article>
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Milczące Wody – thriller">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--8">
-                <span class="poster-icon">🌊</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Milczące Wody" tabindex="-1">▶</button>
-              </div>
-              <span class="card__badge card__badge--new">PREMIERA</span>
-            </div>
-            <div class="card__info">
-              <div class="card__tags"><span class="tag">Thriller</span></div>
-              <h3 class="card__title">Milczące Wody</h3>
-              <p class="card__meta">2024 · 1h 57min · ★ 8.3</p>
-            </div>
-          </article>
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Piąty Element – dokument">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--9">
-                <span class="poster-icon">🔬</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Piąty Element" tabindex="-1">▶</button>
-              </div>
-            </div>
-            <div class="card__info">
-              <div class="card__tags"><span class="tag">Dokument</span></div>
-              <h3 class="card__title">Piąty Element</h3>
-              <p class="card__meta">2024 · 1h 20min · ★ 8.6</p>
-            </div>
-          </article>
-
-          <article class="card" role="listitem" tabindex="0" aria-label="Ostatnie Słowa – serial komediowy">
-            <div class="card__poster">
-              <div class="poster-placeholder poster--10">
-                <span class="poster-icon">🎙️</span>
-              </div>
-              <div class="card__overlay" aria-hidden="true">
-                <button class="card__play" aria-label="Odtwórz Ostatnie Słowa" tabindex="-1">▶</button>
-              </div>
-            </div>
-            <div class="card__info">
-              <div class="card__tags"><span class="tag">Komedia</span></div>
-              <h3 class="card__title">Ostatnie Słowa</h3>
-              <p class="card__meta">2024 · Sezon 1 · ★ 7.5</p>
-            </div>
-          </article>
-
+        <div class="cards-row" role="list" aria-label="Nowe tytuły" id="new-cards">
+          <!-- filled by api.js -->
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--6"><span class="poster-icon">⛈️</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div><span class="card__badge card__badge--new">PREMIERA</span></div><div class="card__info"><div class="card__tags"><span class="tag">Dramat</span></div><h3 class="card__title">Burza Doskonała</h3><p class="card__meta">2024 · 2h 03min · ★ 8.0</p></div></article>
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--7"><span class="poster-icon">🏙️</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div><span class="card__badge card__badge--new">NOWE</span></div><div class="card__info"><div class="card__tags"><span class="tag">Kryminał</span></div><h3 class="card__title">Widmo Miasta</h3><p class="card__meta">2024 · Sezon 1 · ★ 7.8</p></div></article>
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--8"><span class="poster-icon">🌊</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div><span class="card__badge card__badge--new">PREMIERA</span></div><div class="card__info"><div class="card__tags"><span class="tag">Thriller</span></div><h3 class="card__title">Milczące Wody</h3><p class="card__meta">2024 · 1h 57min · ★ 8.3</p></div></article>
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--9"><span class="poster-icon">🔬</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div></div><div class="card__info"><div class="card__tags"><span class="tag">Dokument</span></div><h3 class="card__title">Piąty Element</h3><p class="card__meta">2024 · 1h 20min · ★ 8.6</p></div></article>
+          <article class="card" role="listitem" tabindex="0"><div class="card__poster"><div class="poster-placeholder poster--10"><span class="poster-icon">🎙️</span></div><div class="card__overlay" aria-hidden="true"><button class="card__play" tabindex="-1">▶</button></div></div><div class="card__info"><div class="card__tags"><span class="tag">Komedia</span></div><h3 class="card__title">Ostatnie Słowa</h3><p class="card__meta">2024 · Sezon 1 · ★ 7.5</p></div></article>
         </div>
       </div>
     </section>
@@ -430,67 +765,23 @@
           <h2 class="section__title" id="pricing-heading">Wybierz swój plan</h2>
           <p class="section__subtitle">Zacznij od miesiąca za darmo. Anuluj kiedy chcesz.</p>
         </div>
-
         <div class="pricing-grid" role="list" aria-label="Plany cenowe">
-
           <article class="pricing-card" role="listitem" aria-label="Plan Podstawowy">
-            <div class="pricing-card__header">
-              <h3 class="pricing-card__name">Podstawowy</h3>
-              <div class="pricing-card__price">
-                <span class="pricing-card__amount">19</span>
-                <span class="pricing-card__currency">zł/mies.</span>
-              </div>
-            </div>
-            <ul class="pricing-card__features" role="list" aria-label="Funkcje planu Podstawowego">
-              <li class="feature feature--yes">Jakość HD (1080p)</li>
-              <li class="feature feature--yes">1 ekran jednocześnie</li>
-              <li class="feature feature--yes">Dostęp do biblioteki</li>
-              <li class="feature feature--no">Pobieranie offline</li>
-              <li class="feature feature--no">4K Ultra HD</li>
-              <li class="feature feature--no">5 profili</li>
-            </ul>
-            <a href="#" class="btn btn--outline btn--block">Wybierz plan</a>
+            <div class="pricing-card__header"><h3 class="pricing-card__name">Podstawowy</h3><div class="pricing-card__price"><span class="pricing-card__amount">19</span><span class="pricing-card__currency">zł/mies.</span></div></div>
+            <ul class="pricing-card__features" role="list"><li class="feature feature--yes">Jakość HD (1080p)</li><li class="feature feature--yes">1 ekran jednocześnie</li><li class="feature feature--yes">Dostęp do biblioteki</li><li class="feature feature--no">Pobieranie offline</li><li class="feature feature--no">4K Ultra HD</li><li class="feature feature--no">5 profili</li></ul>
+            <button class="btn btn--outline btn--block" onclick="SF.openLogin()" style="cursor:pointer;font-family:inherit">Wybierz plan</button>
           </article>
-
           <article class="pricing-card pricing-card--featured" role="listitem" aria-label="Plan Standard – polecany">
             <div class="pricing-card__ribbon" aria-label="Polecany plan">Najpopularniejszy</div>
-            <div class="pricing-card__header">
-              <h3 class="pricing-card__name">Standard</h3>
-              <div class="pricing-card__price">
-                <span class="pricing-card__amount">39</span>
-                <span class="pricing-card__currency">zł/mies.</span>
-              </div>
-            </div>
-            <ul class="pricing-card__features" role="list" aria-label="Funkcje planu Standard">
-              <li class="feature feature--yes">Jakość Full HD</li>
-              <li class="feature feature--yes">2 ekrany jednocześnie</li>
-              <li class="feature feature--yes">Dostęp do biblioteki</li>
-              <li class="feature feature--yes">Pobieranie offline</li>
-              <li class="feature feature--no">4K Ultra HD</li>
-              <li class="feature feature--yes">3 profile</li>
-            </ul>
-            <a href="#" class="btn btn--primary btn--block">Wybierz plan</a>
+            <div class="pricing-card__header"><h3 class="pricing-card__name">Standard</h3><div class="pricing-card__price"><span class="pricing-card__amount">39</span><span class="pricing-card__currency">zł/mies.</span></div></div>
+            <ul class="pricing-card__features" role="list"><li class="feature feature--yes">Jakość Full HD</li><li class="feature feature--yes">2 ekrany jednocześnie</li><li class="feature feature--yes">Dostęp do biblioteki</li><li class="feature feature--yes">Pobieranie offline</li><li class="feature feature--no">4K Ultra HD</li><li class="feature feature--yes">3 profile</li></ul>
+            <button class="btn btn--primary btn--block" onclick="SF.openLogin()" style="cursor:pointer;font-family:inherit">Wybierz plan</button>
           </article>
-
           <article class="pricing-card" role="listitem" aria-label="Plan Premium">
-            <div class="pricing-card__header">
-              <h3 class="pricing-card__name">Premium</h3>
-              <div class="pricing-card__price">
-                <span class="pricing-card__amount">59</span>
-                <span class="pricing-card__currency">zł/mies.</span>
-              </div>
-            </div>
-            <ul class="pricing-card__features" role="list" aria-label="Funkcje planu Premium">
-              <li class="feature feature--yes">Jakość 4K Ultra HD</li>
-              <li class="feature feature--yes">4 ekrany jednocześnie</li>
-              <li class="feature feature--yes">Dostęp do biblioteki</li>
-              <li class="feature feature--yes">Pobieranie offline</li>
-              <li class="feature feature--yes">4K + Dolby Atmos</li>
-              <li class="feature feature--yes">5 profili</li>
-            </ul>
-            <a href="#" class="btn btn--outline btn--block">Wybierz plan</a>
+            <div class="pricing-card__header"><h3 class="pricing-card__name">Premium</h3><div class="pricing-card__price"><span class="pricing-card__amount">59</span><span class="pricing-card__currency">zł/mies.</span></div></div>
+            <ul class="pricing-card__features" role="list"><li class="feature feature--yes">Jakość 4K Ultra HD</li><li class="feature feature--yes">4 ekrany jednocześnie</li><li class="feature feature--yes">Dostęp do biblioteki</li><li class="feature feature--yes">Pobieranie offline</li><li class="feature feature--yes">4K + Dolby Atmos</li><li class="feature feature--yes">5 profili</li></ul>
+            <button class="btn btn--outline btn--block" onclick="SF.openLogin()" style="cursor:pointer;font-family:inherit">Wybierz plan</button>
           </article>
-
         </div>
       </div>
     </section>
@@ -501,59 +792,12 @@
         <div class="section__header section__header--center">
           <h2 class="section__title" id="faq-heading">Często zadawane pytania</h2>
         </div>
-
         <div class="faq" role="list" aria-label="Najczęściej zadawane pytania">
-
-          <div class="faq__item" role="listitem">
-            <button class="faq__question" aria-expanded="false" aria-controls="faq1">
-              Czy mogę anulować subskrypcję w dowolnym momencie?
-              <span class="faq__icon" aria-hidden="true">+</span>
-            </button>
-            <div class="faq__answer" id="faq1" hidden>
-              <p>Tak, możesz anulować subskrypcję w dowolnym momencie bez żadnych opłat. Dostęp będzie aktywny do końca opłaconego okresu.</p>
-            </div>
-          </div>
-
-          <div class="faq__item" role="listitem">
-            <button class="faq__question" aria-expanded="false" aria-controls="faq2">
-              Na ilu urządzeniach mogę korzystać z StreamFlow?
-              <span class="faq__icon" aria-hidden="true">+</span>
-            </button>
-            <div class="faq__answer" id="faq2" hidden>
-              <p>Liczba urządzeń zależy od wybranego planu: Podstawowy – 1, Standard – 2, Premium – 4 urządzenia jednocześnie. Możesz zalogować się na nieograniczonej liczbie urządzeń.</p>
-            </div>
-          </div>
-
-          <div class="faq__item" role="listitem">
-            <button class="faq__question" aria-expanded="false" aria-controls="faq3">
-              Czy StreamFlow działa na Smart TV?
-              <span class="faq__icon" aria-hidden="true">+</span>
-            </button>
-            <div class="faq__answer" id="faq3" hidden>
-              <p>Tak! StreamFlow dostępny jest na Samsung Smart TV, LG webOS, Apple TV, Android TV i Amazon Fire TV. Możesz też korzystać przez przeglądarkę internetową.</p>
-            </div>
-          </div>
-
-          <div class="faq__item" role="listitem">
-            <button class="faq__question" aria-expanded="false" aria-controls="faq4">
-              Czy treści są dostępne po polsku?
-              <span class="faq__icon" aria-hidden="true">+</span>
-            </button>
-            <div class="faq__answer" id="faq4" hidden>
-              <p>Tak, większość tytułów dostępna jest z polskim lektorem, dubbingiem lub napisami. Producje polskie są dostępne w oryginalnej wersji językowej.</p>
-            </div>
-          </div>
-
-          <div class="faq__item" role="listitem">
-            <button class="faq__question" aria-expanded="false" aria-controls="faq5">
-              Jak działa pobieranie treści offline?
-              <span class="faq__icon" aria-hidden="true">+</span>
-            </button>
-            <div class="faq__answer" id="faq5" hidden>
-              <p>W planach Standard i Premium możesz pobierać filmy i seriale na urządzenia mobilne (iOS i Android). Pobrane treści są dostępne przez 30 dni lub 48h od pierwszego odtworzenia.</p>
-            </div>
-          </div>
-
+          <div class="faq__item" role="listitem"><button class="faq__question" aria-expanded="false" aria-controls="faq1">Czy mogę anulować subskrypcję w dowolnym momencie?<span class="faq__icon" aria-hidden="true">+</span></button><div class="faq__answer" id="faq1" hidden><p>Tak, możesz anulować subskrypcję w dowolnym momencie bez żadnych opłat. Dostęp będzie aktywny do końca opłaconego okresu.</p></div></div>
+          <div class="faq__item" role="listitem"><button class="faq__question" aria-expanded="false" aria-controls="faq2">Na ilu urządzeniach mogę korzystać z StreamFlow?<span class="faq__icon" aria-hidden="true">+</span></button><div class="faq__answer" id="faq2" hidden><p>Liczba urządzeń zależy od wybranego planu: Podstawowy – 1, Standard – 2, Premium – 4 urządzenia jednocześnie.</p></div></div>
+          <div class="faq__item" role="listitem"><button class="faq__question" aria-expanded="false" aria-controls="faq3">Czy StreamFlow działa na Smart TV?<span class="faq__icon" aria-hidden="true">+</span></button><div class="faq__answer" id="faq3" hidden><p>Tak! StreamFlow dostępny jest na Samsung Smart TV, LG webOS, Apple TV, Android TV i Amazon Fire TV.</p></div></div>
+          <div class="faq__item" role="listitem"><button class="faq__question" aria-expanded="false" aria-controls="faq4">Czy treści są dostępne po polsku?<span class="faq__icon" aria-hidden="true">+</span></button><div class="faq__answer" id="faq4" hidden><p>Tak, większość tytułów dostępna jest z polskim lektorem, dubbingiem lub napisami.</p></div></div>
+          <div class="faq__item" role="listitem"><button class="faq__question" aria-expanded="false" aria-controls="faq5">Jak działa pobieranie treści offline?<span class="faq__icon" aria-hidden="true">+</span></button><div class="faq__answer" id="faq5" hidden><p>W planach Standard i Premium możesz pobierać filmy i seriale na urządzenia mobilne (iOS i Android). Pobrane treści są dostępne przez 30 dni lub 48h od pierwszego odtworzenia.</p></div></div>
         </div>
       </div>
     </section>
@@ -565,58 +809,17 @@
     <div class="container">
       <div class="footer__top">
         <div class="footer__brand">
-          <a href="#top" class="nav__logo footer__logo" aria-label="StreamFlow – strona główna">
-            <span aria-hidden="true">▶</span> StreamFlow
-          </a>
+          <a href="#top" class="nav__logo footer__logo"><span aria-hidden="true">▶</span> StreamFlow</a>
           <p class="footer__tagline">Oglądaj bez granic.</p>
-          <div class="footer__social" aria-label="Media społecznościowe">
-            <a href="#" class="social-link" aria-label="StreamFlow na Facebooku">f</a>
-            <a href="#" class="social-link" aria-label="StreamFlow na Instagramie">ig</a>
-            <a href="#" class="social-link" aria-label="StreamFlow na YouTube">yt</a>
-            <a href="#" class="social-link" aria-label="StreamFlow na Twitterze / X">x</a>
-          </div>
+          <div class="footer__social"><a href="#" class="social-link" aria-label="Facebook">f</a><a href="#" class="social-link" aria-label="Instagram">ig</a><a href="#" class="social-link" aria-label="YouTube">yt</a><a href="#" class="social-link" aria-label="X">x</a></div>
         </div>
-
-        <nav class="footer__nav" aria-label="Stopka – nawigacja">
-          <div class="footer__col">
-            <h4 class="footer__col-title">Platforma</h4>
-            <ul role="list">
-              <li><a href="#trending" class="footer__link">Co oglądać</a></li>
-              <li><a href="#categories" class="footer__link">Kategorie</a></li>
-              <li><a href="#new" class="footer__link">Nowości</a></li>
-              <li><a href="#pricing" class="footer__link">Cennik</a></li>
-            </ul>
-          </div>
-          <div class="footer__col">
-            <h4 class="footer__col-title">Pomoc</h4>
-            <ul role="list">
-              <li><a href="#faq" class="footer__link">FAQ</a></li>
-              <li><a href="#" class="footer__link">Centrum pomocy</a></li>
-              <li><a href="#" class="footer__link">Kontakt</a></li>
-              <li><a href="#" class="footer__link">Status systemu</a></li>
-            </ul>
-          </div>
-          <div class="footer__col">
-            <h4 class="footer__col-title">Firma</h4>
-            <ul role="list">
-              <li><a href="#" class="footer__link">O nas</a></li>
-              <li><a href="#" class="footer__link">Prasa</a></li>
-              <li><a href="#" class="footer__link">Kariera</a></li>
-              <li><a href="#" class="footer__link">Blog</a></li>
-            </ul>
-          </div>
-          <div class="footer__col">
-            <h4 class="footer__col-title">Prawne</h4>
-            <ul role="list">
-              <li><a href="#" class="footer__link">Regulamin</a></li>
-              <li><a href="#" class="footer__link">Prywatność</a></li>
-              <li><a href="#" class="footer__link">Pliki cookie</a></li>
-              <li><a href="#" class="footer__link">RODO</a></li>
-            </ul>
-          </div>
+        <nav class="footer__nav">
+          <div class="footer__col"><h4 class="footer__col-title">Platforma</h4><ul role="list"><li><a href="#trending" class="footer__link">Co oglądać</a></li><li><a href="#categories" class="footer__link">Kategorie</a></li><li><a href="#new" class="footer__link">Nowości</a></li><li><a href="#pricing" class="footer__link">Cennik</a></li></ul></div>
+          <div class="footer__col"><h4 class="footer__col-title">Pomoc</h4><ul role="list"><li><a href="#faq" class="footer__link">FAQ</a></li><li><a href="#" class="footer__link">Centrum pomocy</a></li><li><a href="#" class="footer__link">Kontakt</a></li></ul></div>
+          <div class="footer__col"><h4 class="footer__col-title">Firma</h4><ul role="list"><li><a href="#" class="footer__link">O nas</a></li><li><a href="#" class="footer__link">Kariera</a></li><li><a href="#" class="footer__link">Blog</a></li></ul></div>
+          <div class="footer__col"><h4 class="footer__col-title">Prawne</h4><ul role="list"><li><a href="#" class="footer__link">Regulamin</a></li><li><a href="#" class="footer__link">Prywatność</a></li><li><a href="#" class="footer__link">RODO</a></li></ul></div>
         </nav>
       </div>
-
       <div class="footer__bottom">
         <p class="footer__copy">© 2025 StreamFlow. Wszelkie prawa zastrzeżone.</p>
         <p class="footer__copy">Projekt zaliczeniowy – Programowanie Warstwy Interfejsu 2025/2026</p>
@@ -624,10 +827,123 @@
     </div>
   </footer>
 
+  <!-- ═══════════════════════════════════════════════════════════
+       ENHANCEMENT OVERLAYS (injected by app.js, declared here
+       so they exist in the DOM from the start)
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- Search Overlay -->
+  <div class="search-overlay" id="searchOverlay" role="dialog" aria-label="Wyszukiwarka" aria-modal="true">
+    <button class="search-overlay__close" id="searchCloseBtn" aria-label="Zamknij wyszukiwarkę">✕</button>
+    <div class="search-overlay__inner">
+      <p class="search-overlay__label">SZUKAJ W BIBLIOTECE</p>
+      <div class="search-overlay__box">
+        <input class="search-overlay__input" id="searchInput" type="search" placeholder="Wpisz tytuł, gatunek…" autocomplete="off" />
+        <button class="search-overlay__btn" id="searchSubmitBtn" aria-label="Szukaj">🔍</button>
+      </div>
+      <div class="search-results" id="searchResults" role="list" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <!-- Movie Detail Modal -->
+  <div class="modal-backdrop" id="movieModalBackdrop" role="dialog" aria-modal="true" aria-label="Szczegóły tytułu">
+    <div class="movie-modal" id="movieModal">
+      <button class="movie-modal__close" id="movieModalClose" aria-label="Zamknij">✕</button>
+      <div class="movie-modal__hero" id="movieModalHero">
+        <div class="movie-modal__hero-gradient"></div>
+        <div class="movie-modal__play-big">
+          <button class="modal-play-btn" id="modalPlayBtn" aria-label="Oglądaj">▶</button>
+        </div>
+      </div>
+      <div class="movie-modal__body">
+        <div class="movie-modal__top">
+          <h2 class="movie-modal__title" id="modalTitle">—</h2>
+          <span class="movie-modal__rating" id="modalRating">★ —</span>
+        </div>
+        <div class="movie-modal__meta" id="modalMeta"></div>
+        <div class="movie-modal__tags" id="modalTags"></div>
+        <p class="movie-modal__desc" id="modalDesc">Ładowanie...</p>
+        <div class="movie-modal__actions">
+          <button class="modal-btn modal-btn--primary" id="modalWatchBtn">▶ Oglądaj teraz</button>
+          <button class="modal-btn modal-btn--list" id="modalListBtn">＋ Moja lista</button>
+          <button class="modal-btn modal-btn--outline" id="modalCloseBtn2">Zamknij</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login/Register Modal -->
+  <div class="modal-backdrop" id="loginModalBackdrop" role="dialog" aria-modal="true" aria-label="Logowanie">
+    <div class="login-modal" id="loginModal">
+      <button class="movie-modal__close" id="loginModalClose" aria-label="Zamknij">✕</button>
+      <div class="login-modal__logo">▶ StreamFlow</div>
+      <div class="login-modal__title" id="loginTitle">Witaj z powrotem</div>
+      <div class="login-modal__sub" id="loginSub">Zaloguj się, aby kontynuować oglądanie</div>
+      <div class="login-modal__tabs">
+        <button class="login-tab active" id="tabLogin">Logowanie</button>
+        <button class="login-tab" id="tabRegister">Rejestracja</button>
+      </div>
+      <div id="loginForm">
+        <div class="form-group"><label class="form-label" for="loginEmail">E-mail</label><input class="form-input" id="loginEmail" type="email" placeholder="twoj@email.pl" /></div>
+        <div class="form-group"><label class="form-label" for="loginPass">Hasło</label><input class="form-input" id="loginPass" type="password" placeholder="••••••••" /></div>
+        <button class="form-submit" id="loginSubmit">Zaloguj się</button>
+        <div class="login-modal__footer">Nie masz konta? <a href="#" id="switchToRegister">Zarejestruj się →</a></div>
+      </div>
+      <div id="registerForm" style="display:none">
+        <div class="form-group"><label class="form-label" for="regName">Imię</label><input class="form-input" id="regName" type="text" placeholder="Jan Kowalski" /></div>
+        <div class="form-group"><label class="form-label" for="regEmail">E-mail</label><input class="form-input" id="regEmail" type="email" placeholder="twoj@email.pl" /></div>
+        <div class="form-group"><label class="form-label" for="regPass">Hasło</label><input class="form-input" id="regPass" type="password" placeholder="Min. 8 znaków" /></div>
+        <button class="form-submit" id="registerSubmit">Utwórz konto</button>
+        <div class="login-modal__footer">Masz konto? <a href="#" id="switchToLogin">Zaloguj się →</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Overlay -->
+  <div class="player-overlay" id="playerOverlay" role="dialog" aria-modal="true" aria-label="Odtwarzacz">
+    <button class="player-close" id="playerClose">✕ Zamknij</button>
+    <div class="player-overlay__screen">
+      <div class="player-scanlines" aria-hidden="true"></div>
+      <div class="player-overlay__icon" id="playerIcon">🎬</div>
+      <div class="player-overlay__title" id="playerTitle">Tytuł</div>
+      <div class="player-overlay__sub">Odtwarzanie w jakości 4K · Dolby Atmos</div>
+    </div>
+    <div class="player-bar">
+      <span class="player-bar__title" id="playerBarTitle">—</span>
+      <div class="player-progress" id="playerProgress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+        <div class="player-progress__fill" id="playerFill"></div>
+      </div>
+      <span class="player-time" id="playerTime">0:00 / 0:00</span>
+      <button class="player-btn" id="playerPause" aria-label="Pauza">⏸</button>
+      <button class="player-btn" id="playerMute" aria-label="Wycisz">🔊</button>
+    </div>
+  </div>
+
+  <!-- My List Panel -->
+  <div class="mylist-panel" id="myListPanel" role="dialog" aria-label="Moja lista">
+    <div class="mylist-panel__head">
+      <span class="mylist-panel__title">📋 Moja lista</span>
+      <button class="mylist-panel__close" id="myListClose" aria-label="Zamknij">✕</button>
+    </div>
+    <div class="mylist-panel__body" id="myListBody">
+      <p class="mylist-panel__empty">Lista jest pusta.<br/>Dodaj tytuły klikając ＋ Moja lista.</p>
+    </div>
+  </div>
+
+  <!-- My List Floating Button -->
+  <button class="mylist-btn" id="myListBtn" aria-label="Otwórz moją listę">
+    📋 Moja lista <span class="mylist-count" id="myListCount">0</span>
+  </button>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <!-- Scripts -->
   <script src="js/nav.js"></script>
   <script src="js/faq.js"></script>
   <script src="js/animations.js"></script>
   <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+
 </body>
 </html>
